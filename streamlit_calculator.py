@@ -307,7 +307,7 @@ def main():
     
     # Calculate reasonable down payment range
     min_down_payment = max(1000, int(home_price * 0.03))  # At least 3% or $1000
-    max_down_payment = int(home_price * 0.5)  # Up to 50% of home price
+    max_down_payment = int(home_price * 1) 
     default_down_payment = min(650000, int(home_price * 0.2))  
 
     down_payment_amount = st.sidebar.number_input(
@@ -383,7 +383,8 @@ def main():
     # Charts section
     st.subheader("📈 Visual Analysis")
     
-    col1, col2 = st.columns([1, 2])
+    # First row - Payment breakdown and Price comparison
+    col1, col2 = st.columns(2)
     
     with col1:
         # Payment breakdown chart
@@ -396,12 +397,132 @@ def main():
             scenario,
             price_range=(home_price * 0.7, home_price * 1.3),
             rate_range=(max(1, interest_rate - 2), interest_rate + 2),
-            down_payment_range=(home_price * 0.05, home_price * 0.35)  # 5% to 35% of home price
+            down_payment_range=(home_price * 0.05, home_price * 0.80)  # 5% to 80% of home price
         )
         
-        # Comparison charts
-        comparison_chart = create_comparison_charts(comparison_data)
-        st.plotly_chart(comparison_chart, use_container_width=True)
+        # Create individual price comparison chart
+        price_data = [d for d in comparison_data if d['scenario_type'] == 'Price Variation']
+        fig_price = go.Figure()
+        fig_price.add_trace(go.Scatter(
+            x=[d['variable_value'] for d in price_data],
+            y=[d['monthly_payment'] for d in price_data],
+            mode='lines+markers',
+            name='Monthly Payment',
+            line=dict(color='blue')
+        ))
+        fig_price.update_layout(
+            title="Monthly Payment vs Home Price",
+            xaxis_title="Home Price ($)",
+            yaxis_title="Monthly Payment ($)",
+            height=400
+        )
+        st.plotly_chart(fig_price, use_container_width=True)
+    
+    # Second row - Interest rate and Down payment comparisons
+    col3, col4 = st.columns(2)
+    
+    with col3:
+        # Interest rate comparison chart
+        rate_data = [d for d in comparison_data if d['scenario_type'] == 'Rate Variation']
+        fig_rate = go.Figure()
+        fig_rate.add_trace(go.Scatter(
+            x=[d['variable_value'] for d in rate_data],
+            y=[d['monthly_payment'] for d in rate_data],
+            mode='lines+markers',
+            name='Monthly Payment',
+            line=dict(color='red')
+        ))
+        fig_rate.update_layout(
+            title="Monthly Payment vs Interest Rate",
+            xaxis_title="Interest Rate (%)",
+            yaxis_title="Monthly Payment ($)",
+            height=400
+        )
+        st.plotly_chart(fig_rate, use_container_width=True)
+    
+    with col4:
+        # Down payment comparison chart
+        dp_data = [d for d in comparison_data if d['scenario_type'] == 'Down Payment Variation']
+        fig_dp = go.Figure()
+        fig_dp.add_trace(go.Scatter(
+            x=[(d['variable_value'] / home_price * 100) for d in dp_data],  # Convert to percentage
+            y=[d['monthly_payment'] for d in dp_data],
+            mode='lines+markers',
+            name='Monthly Payment',
+            line=dict(color='green')
+        ))
+        fig_dp.update_layout(
+            title="Monthly Payment vs Down Payment %",
+            xaxis_title="Down Payment (%)",
+            yaxis_title="Monthly Payment ($)",
+            height=400
+        )
+        st.plotly_chart(fig_dp, use_container_width=True)
+    
+    # Third row - DTI Ratio comparison
+    st.subheader("📊 DTI Ratio Analysis")
+    col5, col6 = st.columns(2)
+    
+    with col5:
+        # DTI ratio comparison chart
+        fig_dti = go.Figure()
+        colors = {'Price Variation': 'blue', 'Rate Variation': 'red', 'Down Payment Variation': 'green'}
+        for scenario_type in ['Price Variation', 'Rate Variation', 'Down Payment Variation']:
+            scenario_data = [d for d in comparison_data if d['scenario_type'] == scenario_type]
+            if scenario_type == 'Down Payment Variation':
+                x_values = [(d['variable_value'] / home_price * 100) for d in scenario_data]
+                x_title = "Down Payment (%)"
+            elif scenario_type == 'Price Variation':
+                x_values = [d['variable_value'] for d in scenario_data]
+                x_title = "Home Price ($)"
+            else:
+                x_values = [d['variable_value'] for d in scenario_data]
+                x_title = "Interest Rate (%)"
+            
+            fig_dti.add_trace(go.Scatter(
+                x=x_values,
+                y=[d['front_end_ratio'] for d in scenario_data],
+                mode='lines+markers',
+                name=f'{scenario_type}',
+                line=dict(color=colors[scenario_type])
+            ))
+        
+        fig_dti.add_hline(y=28, line_dash="dash", line_color="orange", 
+                         annotation_text="28% DTI Threshold")
+        fig_dti.update_layout(
+            title="DTI Ratio Comparison",
+            xaxis_title="Variable Value",
+            yaxis_title="Front-End DTI Ratio (%)",
+            height=400
+        )
+        st.plotly_chart(fig_dti, use_container_width=True)
+    
+    with col6:
+        # Affordability summary chart
+        affordability_counts = {}
+        for scenario_type in ['Price Variation', 'Rate Variation', 'Down Payment Variation']:
+            scenario_data = [d for d in comparison_data if d['scenario_type'] == scenario_type]
+            affordable_count = sum(1 for d in scenario_data if d['affordable'])
+            total_count = len(scenario_data)
+            affordability_counts[scenario_type] = (affordable_count / total_count) * 100
+        
+        fig_afford = go.Figure(data=[
+            go.Bar(
+                x=list(affordability_counts.keys()),
+                y=list(affordability_counts.values()),
+                marker_color=['blue', 'red', 'green'],
+                text=[f"{v:.0f}%" for v in affordability_counts.values()],
+                textposition='auto'
+            )
+        ])
+        fig_afford.update_layout(
+            title="Affordability Rate by Scenario",
+            xaxis_title="Scenario Type",
+            yaxis_title="Affordable Scenarios (%)",
+            height=400,
+            yaxis=dict(range=[0, 100])
+        )
+        st.plotly_chart(fig_afford, use_container_width=True)
     
     # Additional insights
     st.markdown("---")
