@@ -305,18 +305,31 @@ def main():
     st.sidebar.subheader("Basic Information")
     home_price = st.sidebar.number_input("Home Price ($)", min_value=50000, max_value=5000000, value=1650000, step=10000)
     
+    # Initialize down payment in session state if not exists
+    if 'down_payment_amount' not in st.session_state:
+        st.session_state.down_payment_amount = min(650000, int(home_price * 0.2))
+    
     # Calculate reasonable down payment range
     min_down_payment = max(1000, int(home_price * 0.03))  # At least 3% or $1000
     max_down_payment = int(home_price * 1) 
-    default_down_payment = min(650000, int(home_price * 0.2))  
+    
+    # Ensure current down payment is within valid range for new home price
+    if st.session_state.down_payment_amount < min_down_payment:
+        st.session_state.down_payment_amount = min_down_payment
+    elif st.session_state.down_payment_amount > max_down_payment:
+        st.session_state.down_payment_amount = max_down_payment
 
     down_payment_amount = st.sidebar.number_input(
         "Down Payment ($)", 
         min_value=min_down_payment, 
         max_value=max_down_payment, 
-        value=default_down_payment, 
-        step=5000
+        value=st.session_state.down_payment_amount, 
+        step=5000,
+        key='down_payment_input'
     )
+    
+    # Update session state when user changes the value
+    st.session_state.down_payment_amount = down_payment_amount
     
     interest_rate = st.sidebar.slider("Interest Rate (%)", min_value=3.0, max_value=10.0, value=6.5, step=0.1)
     loan_term_years = st.sidebar.selectbox("Loan Term (years)", [15, 20, 25, 30], index=3)
