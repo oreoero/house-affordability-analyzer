@@ -14,7 +14,7 @@ import numpy as np
 class MortgageScenario:
     """Data class representing a mortgage scenario"""
     home_price: float
-    down_payment_percent: float
+    down_payment_amount: float
     interest_rate: float
     loan_term_years: int
     monthly_income: float
@@ -44,8 +44,9 @@ class MortgageModel:
     @staticmethod
     def calculate_affordability_metrics(scenario: MortgageScenario) -> Dict[str, Any]:
         """Calculate comprehensive affordability metrics"""
-        loan_amount = scenario.home_price * (1 - scenario.down_payment_percent / 100)
-        down_payment = scenario.home_price * scenario.down_payment_percent / 100
+        loan_amount = scenario.home_price - scenario.down_payment_amount
+        down_payment = scenario.down_payment_amount
+        down_payment_percent = (scenario.down_payment_amount / scenario.home_price) * 100
         
         monthly_pi = MortgageModel.calculate_monthly_payment(
             loan_amount, scenario.interest_rate, scenario.loan_term_years
@@ -66,6 +67,7 @@ class MortgageModel:
         return {
             'loan_amount': loan_amount,
             'down_payment': down_payment,
+            'down_payment_percent': down_payment_percent,
             'monthly_pi': monthly_pi,
             'monthly_property_tax': monthly_property_tax,
             'monthly_insurance': monthly_insurance,
@@ -87,9 +89,10 @@ class MortgageModel:
         # Price comparison
         price_values = np.linspace(price_range[0], price_range[1], 10)
         for price in price_values:
+            # Keep the same down payment amount, but recalculate percentage for new price
             scenario = MortgageScenario(
                 home_price=price,
-                down_payment_percent=base_scenario.down_payment_percent,
+                down_payment_amount=base_scenario.down_payment_amount,
                 interest_rate=base_scenario.interest_rate,
                 loan_term_years=base_scenario.loan_term_years,
                 monthly_income=base_scenario.monthly_income,
@@ -112,7 +115,7 @@ class MortgageModel:
         for rate in rate_values:
             scenario = MortgageScenario(
                 home_price=base_scenario.home_price,
-                down_payment_percent=base_scenario.down_payment_percent,
+                down_payment_amount=base_scenario.down_payment_amount,
                 interest_rate=rate,
                 loan_term_years=base_scenario.loan_term_years,
                 monthly_income=base_scenario.monthly_income,
@@ -132,10 +135,10 @@ class MortgageModel:
         
         # Down payment comparison
         dp_values = np.linspace(down_payment_range[0], down_payment_range[1], 10)
-        for dp in dp_values:
+        for dp_amount in dp_values:
             scenario = MortgageScenario(
                 home_price=base_scenario.home_price,
-                down_payment_percent=dp,
+                down_payment_amount=dp_amount,
                 interest_rate=base_scenario.interest_rate,
                 loan_term_years=base_scenario.loan_term_years,
                 monthly_income=base_scenario.monthly_income,
@@ -147,7 +150,7 @@ class MortgageModel:
             metrics = MortgageModel.calculate_affordability_metrics(scenario)
             data.append({
                 'scenario_type': 'Down Payment Variation',
-                'variable_value': dp,
+                'variable_value': dp_amount,
                 'monthly_payment': metrics['total_monthly_payment'],
                 'front_end_ratio': metrics['front_end_ratio'],
                 'affordable': metrics['affordable']
@@ -275,7 +278,7 @@ def create_comparison_charts(data: List[Dict]) -> go.Figure:
     # Update axis labels
     fig.update_xaxes(title_text="Home Price ($)", row=1, col=1)
     fig.update_xaxes(title_text="Interest Rate (%)", row=1, col=2)
-    fig.update_xaxes(title_text="Down Payment (%)", row=2, col=1)
+    fig.update_xaxes(title_text="Down Payment ($)", row=2, col=1)
     fig.update_xaxes(title_text="Variable Value", row=2, col=2)
     fig.update_yaxes(title_text="Monthly Payment ($)", row=1, col=1)
     fig.update_yaxes(title_text="Monthly Payment ($)", row=1, col=2)
@@ -287,7 +290,7 @@ def create_comparison_charts(data: List[Dict]) -> go.Figure:
 
 def main():
     st.set_page_config(
-        page_title="🏠 Home Affordability Calculator",
+        page_title="Home Affordability Calculator",
         page_icon="🏠",
         layout="wide",
         initial_sidebar_state="expanded"
@@ -300,22 +303,35 @@ def main():
     st.sidebar.header("📊 Input Parameters")
     
     st.sidebar.subheader("Basic Information")
-    home_price = st.sidebar.number_input("Home Price ($)", min_value=50000, max_value=5000000, value=650000, step=10000)
-    down_payment_percent = st.sidebar.slider("Down Payment (%)", min_value=5, max_value=30, value=20, step=1)
+    home_price = st.sidebar.number_input("Home Price ($)", min_value=50000, max_value=5000000, value=1650000, step=10000)
+    
+    # Calculate reasonable down payment range
+    min_down_payment = max(1000, int(home_price * 0.03))  # At least 3% or $1000
+    max_down_payment = int(home_price * 0.5)  # Up to 50% of home price
+    default_down_payment = min(650000, int(home_price * 0.2))  
+
+    down_payment_amount = st.sidebar.number_input(
+        "Down Payment ($)", 
+        min_value=min_down_payment, 
+        max_value=max_down_payment, 
+        value=default_down_payment, 
+        step=5000
+    )
+    
     interest_rate = st.sidebar.slider("Interest Rate (%)", min_value=3.0, max_value=10.0, value=6.5, step=0.1)
     loan_term_years = st.sidebar.selectbox("Loan Term (years)", [15, 20, 25, 30], index=3)
     
     st.sidebar.subheader("Financial Information")
-    monthly_income = st.sidebar.number_input("Monthly Income ($)", min_value=1000, max_value=100000, value=10000, step=500)
-    monthly_debts = st.sidebar.number_input("Monthly Debts ($)", min_value=0, max_value=50000, value=500, step=100)
-    property_tax_annual = st.sidebar.number_input("Property Tax (Annual $)", min_value=0, max_value=100000, value=6500, step=500)
-    insurance_annual = st.sidebar.number_input("Insurance (Annual $)", min_value=0, max_value=20000, value=1800, step=100)
-    hoa_monthly = st.sidebar.number_input("HOA (Monthly $)", min_value=0, max_value=2000, value=150, step=25)
+    monthly_income = st.sidebar.number_input("Monthly Income ($)", min_value=1000, max_value=100000, value=25000, step=500)
+    monthly_debts = st.sidebar.number_input("Monthly Debts ($)", min_value=0, max_value=50000, value=2500, step=100)
+    property_tax_annual = st.sidebar.number_input("Property Tax (Annual $)", min_value=0, max_value=100000, value=12000, step=500)
+    insurance_annual = st.sidebar.number_input("Insurance (Annual $)", min_value=0, max_value=20000, value=2800, step=100)
+    hoa_monthly = st.sidebar.number_input("HOA (Monthly $)", min_value=0, max_value=2000, value=75, step=25)
     
     # Create scenario and calculate metrics
     scenario = MortgageScenario(
         home_price=home_price,
-        down_payment_percent=down_payment_percent,
+        down_payment_amount=down_payment_amount,
         interest_rate=interest_rate,
         loan_term_years=loan_term_years,
         monthly_income=monthly_income,
@@ -334,6 +350,7 @@ def main():
         st.subheader("💰 Loan Details")
         st.metric("Loan Amount", f"${metrics['loan_amount']:,.0f}")
         st.metric("Down Payment", f"${metrics['down_payment']:,.0f}")
+        st.caption(f"({metrics['down_payment_percent']:.1f}% of home price)")
         st.metric("Monthly P&I", f"${metrics['monthly_pi']:,.0f}")
         
     with col2:
@@ -379,7 +396,7 @@ def main():
             scenario,
             price_range=(home_price * 0.7, home_price * 1.3),
             rate_range=(max(1, interest_rate - 2), interest_rate + 2),
-            down_payment_range=(5, 30)
+            down_payment_range=(home_price * 0.05, home_price * 0.35)  # 5% to 35% of home price
         )
         
         # Comparison charts
