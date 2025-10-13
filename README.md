@@ -35,7 +35,7 @@ An interactive web application for calculating home affordability with comprehen
 Start the Streamlit application:
 
 ```bash
-uv run streamlit run streamlit_calculator.py
+uv run streamlit run main.py
 ```
 
 The application will open in your default browser at `http://localhost:8501`
@@ -69,7 +69,7 @@ The application will open in your default browser at `http://localhost:8501`
 
 ```
 home-affordability-calculator/
-├── streamlit_calculator.py    # Main Streamlit application
+├── main.py                   # Main Streamlit application
 ├── pyproject.toml            # Project dependencies
 ├── uv.lock                   # Dependency lock file
 └── README.md                 # This file
