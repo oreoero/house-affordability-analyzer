@@ -9,6 +9,10 @@ from dataclasses import dataclass
 from typing import List, Dict, Any
 import numpy as np
 
+# Constants
+PROPERTY_TAX_RATE = 0.007  # 0.7% property tax rate for Redmond, WA
+INSURANCE_RATE = 0.003     # 0.3% insurance rate
+
 
 @dataclass
 class MortgageScenario:
@@ -97,8 +101,8 @@ class MortgageModel:
                 loan_term_years=base_scenario.loan_term_years,
                 monthly_income=base_scenario.monthly_income,
                 monthly_debts=base_scenario.monthly_debts,
-                property_tax_annual=price * 0.01,  # Assume 1% property tax
-                insurance_annual=price * 0.003,   # Assume 0.3% insurance
+                property_tax_annual=price * PROPERTY_TAX_RATE,
+                insurance_annual=price * INSURANCE_RATE,
                 hoa_monthly=base_scenario.hoa_monthly
             )
             metrics = MortgageModel.calculate_affordability_metrics(scenario)
@@ -308,11 +312,11 @@ def main():
     
     # Initialize down payment in session state if not exists
     if 'down_payment_amount' not in st.session_state:
-        st.session_state.down_payment_amount = min(1000000, int(home_price * 0.2))
+        st.session_state.down_payment_amount = 1000000
     
     # Initialize property tax in session state if not exists
     if 'property_tax_annual' not in st.session_state:
-        st.session_state.property_tax_annual = int(home_price * 0.0105)  # Default 1.05% for Redmond, WA
+        st.session_state.property_tax_annual = int(home_price * PROPERTY_TAX_RATE)
     
     # Calculate reasonable down payment range
     min_down_payment = max(1000, int(home_price * 0.03))  # At least 3% or $1000
@@ -336,7 +340,7 @@ def main():
     # Update session state when user changes the value
     st.session_state.down_payment_amount = down_payment_amount
     
-    interest_rate = st.sidebar.slider("Interest Rate (%)", min_value=3.0, max_value=10.0, value=6.5, step=0.1)
+    interest_rate = st.sidebar.slider("Interest Rate (%)", min_value=3.0, max_value=10.0, value=6.0, step=0.1)
     loan_term_years = st.sidebar.selectbox("Loan Term (years)", [15, 20, 25, 30], index=3)
     
     st.sidebar.subheader("Financial Information")
@@ -344,7 +348,7 @@ def main():
     monthly_debts = st.sidebar.number_input("Monthly Debts ($)", min_value=0, max_value=50000, value=2500, step=100)
     
     # Update property tax default based on home price
-    default_property_tax = int(home_price * 0.0105)  # 1.05% for Redmond, WA (King County)
+    default_property_tax = int(home_price * PROPERTY_TAX_RATE)
     if 'property_tax_annual' not in st.session_state or st.session_state.get('last_home_price') != home_price:
         st.session_state.property_tax_annual = default_property_tax
         st.session_state.last_home_price = home_price
@@ -356,7 +360,7 @@ def main():
         value=st.session_state.property_tax_annual, 
         step=500,
         key='property_tax_input',
-        help=f"Redmond, WA rate: ~1.05% (${default_property_tax:,})"
+        help=f"Redmond, WA rate: ~{PROPERTY_TAX_RATE*100:.1f}% (${default_property_tax:,})"
     )
     
     # Update session state when user changes the value
