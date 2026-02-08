@@ -304,11 +304,11 @@ def main():
     st.sidebar.header("📊 Input Parameters")
     
     st.sidebar.subheader("Basic Information")
-    home_price = st.sidebar.number_input("Home Price ($)", min_value=50000, max_value=5000000, value=1650000, step=10000)
+    home_price = st.sidebar.number_input("Home Price ($)", min_value=50000, max_value=5000000, value=1850000, step=10000)
     
     # Initialize down payment in session state if not exists
     if 'down_payment_amount' not in st.session_state:
-        st.session_state.down_payment_amount = min(650000, int(home_price * 0.2))
+        st.session_state.down_payment_amount = min(1000000, int(home_price * 0.2))
     
     # Initialize property tax in session state if not exists
     if 'property_tax_annual' not in st.session_state:
