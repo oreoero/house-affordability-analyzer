@@ -11,7 +11,7 @@ import numpy as np
 
 # Constants
 PROPERTY_TAX_RATE = 0.007  # 0.7% property tax rate for Redmond, WA
-INSURANCE_RATE = 0.003     # 0.3% insurance rate
+DEFAULT_INSURANCE_ANNUAL = 2200  # Annual homeowners insurance for Redmond, WA
 
 
 @dataclass
@@ -102,7 +102,7 @@ class MortgageModel:
                 monthly_income=base_scenario.monthly_income,
                 monthly_debts=base_scenario.monthly_debts,
                 property_tax_annual=price * PROPERTY_TAX_RATE,
-                insurance_annual=price * INSURANCE_RATE,
+                insurance_annual=base_scenario.insurance_annual,  # Keep user's insurance, not tied to price
                 hoa_monthly=base_scenario.hoa_monthly
             )
             metrics = MortgageModel.calculate_affordability_metrics(scenario)
@@ -318,6 +318,10 @@ def main():
     if 'property_tax_annual' not in st.session_state:
         st.session_state.property_tax_annual = int(home_price * PROPERTY_TAX_RATE)
     
+    # Initialize insurance in session state if not exists
+    if 'insurance_annual' not in st.session_state:
+        st.session_state.insurance_annual = DEFAULT_INSURANCE_ANNUAL
+    
     # Calculate reasonable down payment range
     min_down_payment = max(1000, int(home_price * 0.03))  # At least 3% or $1000
     max_down_payment = int(home_price * 1) 
@@ -366,7 +370,19 @@ def main():
     # Update session state when user changes the value
     st.session_state.property_tax_annual = property_tax_annual
     
-    insurance_annual = st.sidebar.number_input("Insurance (Annual $)", min_value=0, max_value=20000, value=2800, step=100)
+    insurance_annual = st.sidebar.number_input(
+        "Insurance (Annual $)", 
+        min_value=0, 
+        max_value=20000, 
+        value=st.session_state.insurance_annual, 
+        step=100,
+        key='insurance_input',
+        help=f"Based on reconstruction cost, not market value. Redmond avg: ${DEFAULT_INSURANCE_ANNUAL:,}/year (~${DEFAULT_INSURANCE_ANNUAL/12:.0f}/month)"
+    )
+    
+    # Update session state when user changes the value
+    st.session_state.insurance_annual = insurance_annual
+    
     hoa_monthly = st.sidebar.number_input("HOA (Monthly $)", min_value=0, max_value=2000, value=75, step=25)
     
     # Create scenario and calculate metrics
