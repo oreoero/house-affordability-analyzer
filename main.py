@@ -297,6 +297,7 @@ def main():
     )
     
     st.title("🏠 Home Affordability Calculator")
+    st.caption("📍 Redmond, Washington")
     st.markdown("---")
     
     # Sidebar inputs
@@ -308,6 +309,10 @@ def main():
     # Initialize down payment in session state if not exists
     if 'down_payment_amount' not in st.session_state:
         st.session_state.down_payment_amount = min(650000, int(home_price * 0.2))
+    
+    # Initialize property tax in session state if not exists
+    if 'property_tax_annual' not in st.session_state:
+        st.session_state.property_tax_annual = int(home_price * 0.0105)  # Default 1.05% for Redmond, WA
     
     # Calculate reasonable down payment range
     min_down_payment = max(1000, int(home_price * 0.03))  # At least 3% or $1000
@@ -337,7 +342,26 @@ def main():
     st.sidebar.subheader("Financial Information")
     monthly_income = st.sidebar.number_input("Monthly Income ($)", min_value=1000, max_value=100000, value=25000, step=500)
     monthly_debts = st.sidebar.number_input("Monthly Debts ($)", min_value=0, max_value=50000, value=2500, step=100)
-    property_tax_annual = st.sidebar.number_input("Property Tax (Annual $)", min_value=0, max_value=100000, value=12000, step=500)
+    
+    # Update property tax default based on home price
+    default_property_tax = int(home_price * 0.0105)  # 1.05% for Redmond, WA (King County)
+    if 'property_tax_annual' not in st.session_state or st.session_state.get('last_home_price') != home_price:
+        st.session_state.property_tax_annual = default_property_tax
+        st.session_state.last_home_price = home_price
+    
+    property_tax_annual = st.sidebar.number_input(
+        "Property Tax (Annual $)", 
+        min_value=0, 
+        max_value=100000, 
+        value=st.session_state.property_tax_annual, 
+        step=500,
+        key='property_tax_input',
+        help=f"Redmond, WA rate: ~1.05% (${default_property_tax:,})"
+    )
+    
+    # Update session state when user changes the value
+    st.session_state.property_tax_annual = property_tax_annual
+    
     insurance_annual = st.sidebar.number_input("Insurance (Annual $)", min_value=0, max_value=20000, value=2800, step=100)
     hoa_monthly = st.sidebar.number_input("HOA (Monthly $)", min_value=0, max_value=2000, value=75, step=25)
     
