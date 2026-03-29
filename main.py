@@ -312,7 +312,7 @@ def main():
     
     # Initialize down payment in session state if not exists
     if 'down_payment_amount' not in st.session_state:
-        st.session_state.down_payment_amount = 1000000
+        st.session_state.down_payment_amount = 900000
     
     # Initialize property tax in session state if not exists
     if 'property_tax_annual' not in st.session_state:
@@ -337,7 +337,7 @@ def main():
         min_value=min_down_payment, 
         max_value=max_down_payment, 
         value=st.session_state.down_payment_amount, 
-        step=5000,
+        step=50000,
         key='down_payment_input'
     )
     
@@ -348,8 +348,8 @@ def main():
     loan_term_years = st.sidebar.selectbox("Loan Term (years)", [15, 20, 25, 30], index=3)
     
     st.sidebar.subheader("Financial Information")
-    monthly_income = st.sidebar.number_input("Monthly Income ($)", min_value=1000, max_value=100000, value=25000, step=500)
-    monthly_debts = st.sidebar.number_input("Monthly Debts ($)", min_value=0, max_value=50000, value=2500, step=100)
+    monthly_income = st.sidebar.number_input("Monthly Income ($)", min_value=1000, max_value=100000, value=30000, step=500)
+    monthly_debts = st.sidebar.number_input("Monthly Debts ($)", min_value=0, max_value=50000, value=4000, step=100)
     
     # Update property tax default based on home price
     default_property_tax = int(home_price * PROPERTY_TAX_RATE)
